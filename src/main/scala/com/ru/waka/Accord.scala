@@ -1,6 +1,7 @@
 package com.ru.waka
 
-import com.wix.accord.{validate, Validator}
+import com.wix.accord.{NullSafeValidator, RuleViolation, Validator, validate}
+import com.wix.accord.ViolationBuilder.singleViolationToFailure
 import com.wix.accord.dsl._
 
 object Accord {
@@ -15,6 +16,7 @@ object Accord {
 
   implicit val PiyoValidator: Validator[Piyo] = validator { p =>
     p.as is notEmpty
+    p.bs is myNotEmpty as "その値"
   }
 
   /**
@@ -29,9 +31,9 @@ object Accord {
     println(validate(Fuga(Seq(1, 2, 3))))
     // Success
 
-    println(validate(Piyo(Nil)))
-    // Failure(Set(as must not be empty))
-    println(validate(Piyo(Seq("a"))))
+    println(validate(Piyo(Nil, Nil)))
+    // Failure(Set(as must not be empty, その値 List() は空じゃだめなんじゃ〜))
+    println(validate(Piyo(Seq("a"), Seq(1))))
     // Success
   }
 
@@ -39,5 +41,11 @@ object Accord {
 
   case class Fuga(as: Seq[Int])
 
-  case class Piyo(as: Seq[String])
+  case class Piyo(as: Seq[String], bs: Seq[Int])
+
+  def myNotEmpty[T <: Seq[_]]: Validator[ T ] =
+    new NullSafeValidator[ T ](
+      test    = x => x.nonEmpty,
+      failure = x => RuleViolation(x, s"$x は空じゃだめなんじゃ〜")
+    )
 }
